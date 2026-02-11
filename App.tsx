@@ -18,9 +18,8 @@ declare global {
   interface Window {
     gsap: any;
     ScrollTrigger: any;
-    // Removed the inline definition to avoid "Subsequent property declarations must have the same type" error.
-    // Ensure AIStudio is globally accessible or imported correctly where needed.
-    aistudio: AIStudio;
+    // Fix: Use any and optionality for aistudio to resolve conflicts with platform-injected global declarations
+    aistudio?: any;
   }
 }
 
