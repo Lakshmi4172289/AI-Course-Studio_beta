@@ -563,15 +563,42 @@ export default function App() {
   const [showCreator, setShowCreator] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
 
+  // Helper: decode JWT payload to extract user info
+  const decodeToken = (token: string): { id: string; name: string } | null => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return { id: payload.id || payload._id || 'u1', name: payload.name || 'Scholar' };
+    } catch {
+      return null;
+    }
+  };
+
+  // Auto-login from stored token on mount
   useEffect(() => {
-    if (window.aistudio) {
-      window.aistudio.hasSelectedApiKey().then((has: boolean) => { if(has) handleLogin(); });
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken) {
+      const decoded = decodeToken(storedToken);
+      if (decoded) {
+        const initials = decoded.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        setUser({ id: decoded.id, name: decoded.name, email: '', avatar: initials });
+        setView('dashboard');
+      }
     }
   }, []);
 
-  const handleLogin = () => {
-    setUser({ id: 'u1', name: 'Elite Scholar', email: 'scholar@coursecraft.ai', avatar: 'ES' });
-    setView(v => v === 'auth' ? 'dashboard' : v);
+  const handleLogin = (token: string) => {
+    localStorage.setItem('authToken', token);
+    const decoded = decodeToken(token);
+    const userName = decoded?.name || 'Scholar';
+    const initials = userName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    setUser({ id: decoded?.id || 'u1', name: userName, email: '', avatar: initials });
+    setView('dashboard');
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('authToken');
+    setUser(null);
+    setView('landing');
   };
 
   return (
@@ -580,7 +607,7 @@ export default function App() {
         <div className="orb w-[800px] h-[800px] bg-indigo-900/10 top-[-300px] left-[-300px] animate-pulse" />
         <div className="orb w-[600px] h-[600px] bg-purple-900/10 bottom-[-200px] right-[-200px] animate-pulse" style={{ animationDelay: '5s'}} />
       </div>
-      {view !== 'auth' && view !== 'course' && <Navbar user={user} onHome={() => setView('landing')} onSignIn={() => setView('auth')} onSignOut={() => setUser(null)} />}
+      {view !== 'auth' && view !== 'course' && <Navbar user={user} onHome={() => setView('landing')} onSignIn={() => setView('auth')} onSignOut={handleSignOut} />}
       {view === 'landing' && <LandingPage onStart={() => user ? setView('dashboard') : setView('auth')} />}
       {view === 'auth' && <AuthPage onLogin={handleLogin} />}
       {view === 'dashboard' && <Dashboard courses={courses} onCreateNew={() => setShowCreator(true)} onSelectCourse={(c) => { setActiveCourse(c); setView('course'); }} />}
